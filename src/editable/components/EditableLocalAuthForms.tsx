@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ArrowRight, LockKeyhole, Mail, UserRound } from 'lucide-react'
 import { pagesContent } from '@/editable/content/pages.content'
 
 const USERS_KEY = 'slot4:local-auth-users'
@@ -31,8 +32,36 @@ const saveSession = (user: Pick<LocalUser, 'name' | 'email'>) => {
   window.dispatchEvent(new Event('slot4-auth-change'))
 }
 
-const inputClass = 'h-12 rounded-2xl border border-[var(--editable-border)] bg-white/85 px-4 text-base font-bold text-current outline-none transition placeholder:text-current/35 focus:border-current focus:bg-white'
-const buttonClass = 'inline-flex h-12 items-center justify-center rounded-2xl bg-[var(--editable-page-text,#2f1d16)] px-6 text-sm font-black uppercase tracking-[0.18em] text-[var(--editable-page-bg,#fff7ee)] shadow-sm transition hover:-translate-y-0.5 disabled:opacity-60'
+const inputWrapClass = 'group flex items-center gap-3 rounded-[1.2rem] border border-[rgba(26,50,99,0.12)] bg-[#fffaf4] px-4 transition focus-within:border-[var(--slot4-accent)] focus-within:bg-white focus-within:shadow-[0_12px_28px_rgba(26,50,99,0.08)]'
+const inputClass = 'h-14 w-full bg-transparent text-base font-bold text-[var(--slot4-page-text)] outline-none placeholder:text-[var(--slot4-muted-text)]/48'
+const buttonClass = 'inline-flex h-14 items-center justify-center gap-2 rounded-[1.1rem] bg-[var(--slot4-accent)] px-6 text-sm font-black uppercase tracking-[0.18em] text-[var(--slot4-dark-bg)] shadow-[0_18px_32px_rgba(255,197,112,0.28)] transition hover:-translate-y-0.5 disabled:opacity-60'
+const noteClass = 'rounded-[1.2rem] border px-4 py-3 text-sm font-bold'
+
+function AuthField({
+  label,
+  type = 'text',
+  placeholder,
+  value,
+  onChange,
+  icon: Icon,
+}: {
+  label: string
+  type?: string
+  placeholder: string
+  value: string
+  onChange: (value: string) => void
+  icon: typeof Mail
+}) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-[11px] font-black uppercase tracking-[0.22em] text-[var(--slot4-muted-text)]">{label}</span>
+      <span className={inputWrapClass}>
+        <Icon className="h-4 w-4 shrink-0 text-[var(--slot4-muted-text)] transition group-focus-within:text-[var(--slot4-page-text)]" />
+        <input className={inputClass} type={type} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} required />
+      </span>
+    </label>
+  )
+}
 
 export function EditableLocalLoginForm() {
   const router = useRouter()
@@ -58,10 +87,10 @@ export function EditableLocalLoginForm() {
 
   return (
     <form className="mt-6 grid gap-4" onSubmit={submit}>
-      <input className={inputClass} type="email" placeholder="Email address" value={email} onChange={(event) => setEmail(event.target.value)} required />
-      <input className={inputClass} type="password" placeholder="Password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-      {message ? <p className={`rounded-2xl px-4 py-3 text-sm font-bold ${status === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'}`}>{message}</p> : null}
-      <button type="submit" className={buttonClass}>{pagesContent.auth.login.submitLabel}</button>
+      <AuthField label="Email address" type="email" placeholder="you@example.com" value={email} onChange={setEmail} icon={Mail} />
+      <AuthField label="Password" type="password" placeholder="Enter your password" value={password} onChange={setPassword} icon={LockKeyhole} />
+      {message ? <p className={`${noteClass} ${status === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-700'}`}>{message}</p> : null}
+      <button type="submit" className={buttonClass}>{pagesContent.auth.login.submitLabel} <ArrowRight className="h-4 w-4" /></button>
     </form>
   )
 }
@@ -99,11 +128,11 @@ export function EditableLocalSignupForm() {
 
   return (
     <form className="mt-6 grid gap-4" onSubmit={submit}>
-      <input className={inputClass} placeholder="Full name" value={name} onChange={(event) => setName(event.target.value)} required />
-      <input className={inputClass} type="email" placeholder="Email address" value={email} onChange={(event) => setEmail(event.target.value)} required />
-      <input className={inputClass} type="password" placeholder="Password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-      {message ? <p className={`rounded-2xl px-4 py-3 text-sm font-bold ${status === 'success' ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'}`}>{message}</p> : null}
-      <button type="submit" className={buttonClass}>{pagesContent.auth.signup.submitLabel}</button>
+      <AuthField label="Full name" placeholder="Your name" value={name} onChange={setName} icon={UserRound} />
+      <AuthField label="Email address" type="email" placeholder="you@example.com" value={email} onChange={setEmail} icon={Mail} />
+      <AuthField label="Password" type="password" placeholder="Use at least 4 characters" value={password} onChange={setPassword} icon={LockKeyhole} />
+      {message ? <p className={`${noteClass} ${status === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-red-200 bg-red-50 text-red-700'}`}>{message}</p> : null}
+      <button type="submit" className={buttonClass}>{pagesContent.auth.signup.submitLabel} <ArrowRight className="h-4 w-4" /></button>
     </form>
   )
 }
