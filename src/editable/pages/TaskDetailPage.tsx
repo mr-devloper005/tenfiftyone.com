@@ -55,24 +55,86 @@ const escapeHtml = (value: string) => value
 const safeUrl = (value: string) => /^https?:\/\//i.test(value) ? value : '#'
 
 const linkifyMarkdown = (value: string) => value
-  .replace(/\[([^\]]+)]\((https?:\/\/[^\s)]+)\)/gi, (_match, label, url) => `<a href="${safeUrl(url)}" target="_blank" rel="nofollow noopener noreferrer">${label}</a>`)
+  .replace(/\[([^\]]+)]\((https?:\/\/[^\s)]+)\)/gi, (_match, label, url) => `<a href="${safeUrl(url)}" target="_blank" rel="nofollow noopener noreferrer">${escapeHtml(label)}</a>`)
 
 const linkifyText = (value: string) => linkifyMarkdown(value)
   .replace(/(^|[\s(>])((https?:\/\/)[^\s<)]+)/gi, (_match, prefix, url) => `${prefix}<a href="${safeUrl(url)}" target="_blank" rel="nofollow noopener noreferrer">${url}</a>`)
 
-const hardenLinks = (html: string) => html.replace(/<a\s+([^>]*href=["'][^"']+["'][^>]*)>/gi, (_match, attrs) => {
-  let next = String(attrs).replace(/\s+on\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-  if (!/\starget=/i.test(next)) next += ' target="_blank"'
-  if (!/\srel=/i.test(next)) next += ' rel="nofollow noopener noreferrer"'
-  return `<a ${next}>`
-})
+const ALLOWED_TAGS = new Set([
+  'p', 'br', 'b', 'i', 'em', 'strong', 'a', 'ul', 'ol', 'li',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'code',
+  'span', 'div', 'sub', 'sup', 'hr', 'table', 'thead', 'tbody',
+  'tr', 'th', 'td', 'caption', 'figure', 'figcaption', 'img',
+])
 
-const sanitizeHtml = (html: string) => hardenLinks(html
-  .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-  .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-  .replace(/<(iframe|object|embed)[^>]*>[\s\S]*?<\/\1>/gi, '')
-  .replace(/\s+on\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-  .replace(/(href|src)=(['"])javascript:[\s\S]*?\2/gi, '$1="#"'))
+const ALLOWED_ATTRS: Record<string, Set<string>> = {
+  a: new Set(['href', 'title']),
+  img: new Set(['src', 'alt', 'width', 'height']),
+  td: new Set(['colspan', 'rowspan']),
+  th: new Set(['colspan', 'rowspan']),
+}
+
+function sanitizeHtml(html: string): string {
+  if (typeof document === 'undefined') {
+    return html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<(iframe|object|embed|form|input|textarea|select|button)[^>]*>[\s\S]*?<\/\1>/gi, '')
+      .replace(/<(iframe|object|embed|form|input|textarea|select|button|link|meta|base)[^>]*\/?>/gi, '')
+      .replace(/\s+on\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+      .replace(/(href|src|action|formaction)=(['"])(?!https?:\/\/)[\s\S]*?\2/gi, '$1=$2#$2')
+  }
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+
+  function cleanNode(node: Node): void {
+    const children = Array.from(node.childNodes)
+    for (const child of children) {
+      if (child.nodeType === Node.TEXT_NODE) continue
+
+      if (child.nodeType !== Node.ELEMENT_NODE) {
+        child.remove()
+        continue
+      }
+
+      const el = child as Element
+      const tag = el.tagName.toLowerCase()
+
+      if (!ALLOWED_TAGS.has(tag)) {
+        while (el.firstChild) el.parentNode?.insertBefore(el.firstChild, el)
+        el.remove()
+        continue
+      }
+
+      const allowed = ALLOWED_ATTRS[tag] || new Set<string>()
+      for (const attr of Array.from(el.attributes)) {
+        if (attr.name.startsWith('on') || !allowed.has(attr.name)) {
+          el.removeAttribute(attr.name)
+        }
+      }
+
+      if (tag === 'a') {
+        const href = el.getAttribute('href') || ''
+        if (!/^https?:\/\//i.test(href)) el.setAttribute('href', '#')
+        el.setAttribute('target', '_blank')
+        el.setAttribute('rel', 'nofollow noopener noreferrer')
+      }
+
+      if (tag === 'img') {
+        const src = el.getAttribute('src') || ''
+        if (!/^https?:\/\//i.test(src) && !src.startsWith('/') && !src.startsWith('data:image/')) {
+          el.setAttribute('src', '/placeholder.svg?height=900&width=1200')
+        }
+      }
+
+      cleanNode(el)
+    }
+  }
+
+  cleanNode(doc.body)
+  return doc.body.innerHTML
+}
 
 const formatPlainText = (raw: string) => {
   const value = raw.trim()
@@ -84,7 +146,6 @@ const formatPlainText = (raw: string) => {
     .join('')
 }
 
-const summaryText = (post: SitePost) => post.summary || asText(getContent(post).description) || asText(getContent(post).excerpt) || ''
 const categoryOf = (post: SitePost, fallback: string) => getEditableCategory(post) || fallback
 const mapSrcFor = (post: SitePost) => {
   const address = getField(post, ['address', 'location', 'city'])
@@ -131,7 +192,6 @@ function DetailLayout({ task, post, related, comments }: { task: TaskKey; post: 
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[var(--detail-accent)]">{categoryOf(post, 'Featured')}</p>
               <h1 className="mt-5 max-w-4xl font-serif text-5xl leading-[1.02] tracking-[-0.05em] sm:text-6xl lg:text-[4.4rem]">{post.title}</h1>
-              <p className="mt-6 max-w-2xl text-base leading-8 text-white/78">{summaryText(post) || getEditableExcerpt(post, 180)}</p>
               <div className="mt-6 flex flex-wrap gap-3">
                 {location ? <MetaPill icon={MapPin} label={location} dark /> : null}
                 {role ? <MetaPill icon={Tag} label={role} dark /> : null}
@@ -202,9 +262,33 @@ function BodyContent({ post }: { post: SitePost }) {
 function ActionPanel({ task, website, phone, email }: { task: TaskKey; website?: string; phone?: string; email?: string }) {
   const icon = task === 'listing' ? Building2 : task === 'image' ? Camera : task === 'profile' ? UserRound : task === 'sbm' ? Bookmark : task === 'pdf' ? Download : FileText
   const Icon = icon
+  const hasActions = website || phone || email
+  if (!hasActions) return null
   return (
-    <div>
-      
+    <div className="rounded-[2rem] border border-[rgba(26,50,99,0.12)] bg-white p-6 shadow-[0_18px_50px_rgba(26,50,99,0.08)]">
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-[1.2rem] bg-[var(--detail-bg)]">
+          <Icon className="h-5 w-5 text-[var(--detail-soft)]" />
+        </div>
+        <h2 className="font-serif text-2xl tracking-[-0.04em] text-[var(--detail-text)]">Quick actions</h2>
+      </div>
+      <div className="mt-5 grid gap-3">
+        {website ? (
+          <a href={/^https?:\/\//i.test(website) ? website : `https://${website}`} target="_blank" rel="nofollow noopener noreferrer" className="inline-flex items-center gap-2 rounded-[1rem] bg-[var(--detail-accent)] px-5 py-3.5 text-sm font-black text-[var(--detail-text)] transition hover:-translate-y-0.5">
+            <ExternalLink className="h-4 w-4" /> Visit website
+          </a>
+        ) : null}
+        {phone ? (
+          <a href={`tel:${phone.replace(/\s+/g, '')}`} className="inline-flex items-center gap-2 rounded-[1rem] border border-[rgba(26,50,99,0.12)] bg-[var(--detail-bg)] px-5 py-3.5 text-sm font-black text-[var(--detail-text)] transition hover:-translate-y-0.5">
+            <Phone className="h-4 w-4" /> {phone}
+          </a>
+        ) : null}
+        {email ? (
+          <a href={`mailto:${email}`} className="inline-flex items-center gap-2 rounded-[1rem] border border-[rgba(26,50,99,0.12)] bg-[var(--detail-bg)] px-5 py-3.5 text-sm font-black text-[var(--detail-text)] transition hover:-translate-y-0.5">
+            <Mail className="h-4 w-4" /> {email}
+          </a>
+        ) : null}
+      </div>
     </div>
   )
 }

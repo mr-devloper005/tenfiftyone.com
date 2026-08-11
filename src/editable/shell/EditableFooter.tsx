@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
-import { ArrowUpRight } from 'lucide-react'
 import { SITE_CONFIG } from '@/lib/site-config'
 import { globalContent } from '@/editable/content/global.content'
 import { useEditableLocalAuthSession } from '@/editable/components/EditableLocalAuthForms'
@@ -13,7 +12,6 @@ export function EditableFooter() {
     '--editable-footer-text': '#fff8ef',
     '--editable-footer-soft': 'rgba(255,248,239,0.72)',
   } as CSSProperties
-  const taskLinks = SITE_CONFIG.tasks.filter((task) => task.enabled)
   const year = new Date().getFullYear()
   const { session, logout } = useEditableLocalAuthSession()
 

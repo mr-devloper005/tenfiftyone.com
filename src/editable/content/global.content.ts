@@ -11,8 +11,6 @@ export const globalContent = {
     tagline: '',
     primaryLinks: [
       { label: 'Bookmarks', href: '/sbm' },
-      { label: 'Articles', href: '/article' },
-      { label: 'Listings', href: '/listing' },
       { label: 'Contact', href: '/contact' },
     ],
     actions: {
@@ -28,8 +26,6 @@ export const globalContent = {
         title: 'Explore',
         links: [
           { label: 'Bookmarks', href: '/sbm' },
-          { label: 'Articles', href: '/article' },
-          { label: 'Listings', href: '/listing' },
           { label: 'Search', href: '/search' },
         ],
       },
@@ -38,7 +34,6 @@ export const globalContent = {
         links: [
           { label: 'About', href: '/about' },
           { label: 'Contact', href: '/contact' },
-          
         ],
       },
     ],

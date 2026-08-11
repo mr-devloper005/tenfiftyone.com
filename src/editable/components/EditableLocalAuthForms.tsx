@@ -11,8 +11,15 @@ const SESSION_KEY = 'slot4:local-auth-session'
 type LocalUser = {
   name: string
   email: string
-  password: string
+  passwordHash: string
   createdAt: string
+}
+
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(password)
+  const buffer = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(buffer)).map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
 const readUsers = (): LocalUser[] => {
@@ -70,11 +77,12 @@ export function EditableLocalLoginForm() {
   const [message, setMessage] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalizedEmail = email.trim().toLowerCase()
     const user = readUsers().find((item) => item.email.toLowerCase() === normalizedEmail)
-    if (!user || user.password !== password) {
+    const hashed = await hashPassword(password)
+    if (!user || user.passwordHash !== hashed) {
       setStatus('error')
       setMessage(pagesContent.auth.login.noAccount)
       return
@@ -103,7 +111,7 @@ export function EditableLocalSignupForm() {
   const [message, setMessage] = useState<string | null>(null)
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
-  const submit = (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const normalizedName = name.trim()
     const normalizedEmail = email.trim().toLowerCase()
@@ -113,13 +121,19 @@ export function EditableLocalSignupForm() {
       return
     }
     const users = readUsers()
+    if (users.some((item) => item.email.toLowerCase() === normalizedEmail)) {
+      setStatus('error')
+      setMessage('An account with this email already exists. Try logging in instead.')
+      return
+    }
+    const hashed = await hashPassword(password)
     const nextUser: LocalUser = {
       name: normalizedName || normalizedEmail.split('@')[0] || 'Member',
       email: normalizedEmail,
-      password,
+      passwordHash: hashed,
       createdAt: new Date().toISOString(),
     }
-    saveUsers([nextUser, ...users.filter((item) => item.email.toLowerCase() !== normalizedEmail)])
+    saveUsers([nextUser, ...users])
     saveSession(nextUser)
     setStatus('success')
     setMessage(pagesContent.auth.signup.success)
