@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, Bookmark, ExternalLink, Search, Star } from 'lucide-react'
+import { ArrowRight, Bookmark, ExternalLink, Search } from 'lucide-react'
 import type { SitePost } from '@/lib/site-connector'
 import type { HomeTimeSection } from '@/lib/task-data'
 import type { TaskKey } from '@/lib/site-config'
@@ -143,16 +143,14 @@ function FeaturedListingCard({ post, href, style }: { post: SitePost; href: stri
   )
 }
 
-function StatStrip({ posts, timeSections }: { posts: SitePost[]; timeSections: HomeTimeSection[] }) {
+function StatStrip({ posts }: { posts: SitePost[]; timeSections: HomeTimeSection[] }) {
   const categories = uniqueCategories(posts)
-  const totalCollections = timeSections.length || Math.max(4, categories.length)
+  if (!posts.length) return null
   return (
     <div className="mt-10 flex flex-wrap items-center justify-center gap-8 text-center text-white">
       {[
-        { value: `${Math.max(posts.length, 6)}+`, label: 'saved pages' },
-        { value: `${Math.max(categories.length, 4)}`, label: 'categories' },
-        { value: `${Math.max(totalCollections * 2, 10)}K+`, label: 'monthly views' },
-        { value: '4.8★', label: 'reader rating' },
+        { value: `${posts.length}`, label: 'saved pages' },
+        { value: `${categories.length}`, label: 'categories' },
       ].map((item) => (
         <div key={item.label}>
           <p className="font-serif text-3xl">{item.value}</p>
@@ -163,8 +161,7 @@ function StatStrip({ posts, timeSections }: { posts: SitePost[]; timeSections: H
   )
 }
 
-export function EditableHomeHero({ primaryTask, primaryRoute, posts, timeSections }: HomeSectionProps) {
-  const heroTitle = pagesContent.home.hero.title.join(' ')
+export function EditableHomeHero({ primaryTask: _primaryTask, primaryRoute, posts, timeSections }: HomeSectionProps) {
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(180deg,#274f89_0%,#1a3263_100%)] text-white">
       <div className="absolute inset-0 opacity-30">
@@ -174,8 +171,7 @@ export function EditableHomeHero({ primaryTask, primaryRoute, posts, timeSection
       <div className="relative mx-auto max-w-[1440px] px-4 py-16 text-center sm:px-6 lg:px-8 lg:py-24">
         <p className="text-[11px] font-black uppercase tracking-[0.28em] text-[var(--slot4-accent)]">{pagesContent.home.hero.badge}</p>
         <h1 className="mx-auto mt-6 max-w-5xl font-serif text-5xl leading-[1.02] tracking-[-0.04em] sm:text-6xl lg:text-[4.6rem]">
-          {heroTitle.replace('saved links,', '')}{' '}
-          <span className="text-[var(--slot4-accent)]">saved links</span>, collections, and standout finds.
+          Discover the finest <span className="text-[var(--slot4-accent)]">saved links</span>, collections, and standout finds.
         </h1>
         <p className="mx-auto mt-6 max-w-3xl text-base leading-8 text-white/80 sm:text-lg">
           {pagesContent.home.hero.description}
@@ -187,7 +183,7 @@ export function EditableHomeHero({ primaryTask, primaryRoute, posts, timeSection
   )
 }
 
-export function EditableStoryRail({ primaryTask, primaryRoute, posts }: HomeSectionProps) {
+export function EditableStoryRail({ primaryTask: _primaryTask, primaryRoute, posts }: HomeSectionProps) {
   const categories = uniqueCategories(posts)
   if (!categories.length) return null
   return (
@@ -278,18 +274,24 @@ export function EditableTimeCollections({ primaryTask, primaryRoute, posts, time
       </section>
 
       <section className="bg-[#188a8f] text-white">
-        <div className="mx-auto grid max-w-[1440px] gap-8 px-4 py-12 text-center sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8 lg:py-16">
-          {[
-            { value: `${Math.max(posts.length, 6)}+`, label: 'active links' },
-            { value: '98%', label: 'repeat discovery' },
-            { value: '4.8★', label: 'average rating' },
-            { value: '∞', label: 'bookmark potential' },
-          ].map((item) => (
-            <div key={item.label}>
-              <p className="font-serif text-5xl">{item.value}</p>
-              <p className="mt-3 text-sm font-bold text-white/85">{item.label}</p>
+        <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-center gap-8 px-4 py-12 text-center sm:px-6 lg:px-8 lg:py-16">
+          {posts.length ? (
+            <>
+              <div>
+                <p className="font-serif text-5xl">{posts.length}</p>
+                <p className="mt-3 text-sm font-bold text-white/85">active links</p>
+              </div>
+              <div>
+                <p className="font-serif text-5xl">{uniqueCategories(posts).length}</p>
+                <p className="mt-3 text-sm font-bold text-white/85">categories</p>
+              </div>
+            </>
+          ) : (
+            <div>
+              <p className="font-serif text-5xl">∞</p>
+              <p className="mt-3 text-sm font-bold text-white/85">bookmark potential</p>
             </div>
-          ))}
+          )}
         </div>
       </section>
 
@@ -297,32 +299,28 @@ export function EditableTimeCollections({ primaryTask, primaryRoute, posts, time
         <div className="mx-auto max-w-[1440px] px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
           <div className="text-center">
             <span className="inline-flex rounded-full bg-[#d9f1f2] px-5 py-2 text-[11px] font-black uppercase tracking-[0.24em] text-[#188a8f]">
-              Community picks
+              Editor picks
             </span>
-            <h2 className="mt-6 font-serif text-4xl tracking-[-0.04em] text-[var(--slot4-page-text)] sm:text-5xl">What readers keep opening</h2>
+            <h2 className="mt-6 font-serif text-4xl tracking-[-0.04em] text-[var(--slot4-page-text)] sm:text-5xl">Spotlight from the collection</h2>
             <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-[var(--slot4-muted-text)]">
-              A few spotlight cards from the latest stream, arranged like editorial endorsements without breaking the live feed.
+              A few standout entries from the latest stream, surfaced for quick browsing.
             </p>
           </div>
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {supportPosts.slice(0, 3).map((post, index) => (
-              <div key={post.id || post.slug} className="rounded-[1.8rem] border border-[rgba(26,50,99,0.12)] bg-white p-7 shadow-[0_16px_40px_rgba(26,50,99,0.05)]">
-                <div className="flex gap-1 text-[var(--slot4-accent)]">{Array.from({ length: 5 }).map((_, star) => <Star key={star} className="h-4 w-4 fill-current" />)}</div>
-                <p className="mt-5 text-lg leading-9 text-[var(--slot4-page-text)]">
-                  “{getEditableExcerpt(post, 150) || 'A bookmark worth revisiting for its clarity, usefulness, and easy path into related discoveries.'}”
-                </p>
-                <div className="mt-6 flex items-center gap-4">
+              <Link key={post.id || post.slug} href={postHref(primaryTask, post, primaryRoute)} className="group rounded-[1.8rem] border border-[rgba(26,50,99,0.12)] bg-white p-7 shadow-[0_16px_40px_rgba(26,50,99,0.05)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(26,50,99,0.12)]">
+                <div className="flex items-center gap-4">
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--slot4-accent-soft)] text-sm font-black text-[var(--slot4-page-text)]">
                     {String(index + 1)}
                   </div>
-                  <div>
-                    <p className="font-black text-[var(--slot4-page-text)]">{getEditableCategory(post)}</p>
-                    <Link href={postHref(primaryTask, post, primaryRoute)} className="text-sm font-semibold text-[var(--slot4-muted-text)] hover:text-[var(--slot4-page-text)]">
-                      Open “{post.title}”
-                    </Link>
-                  </div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[var(--slot4-teal)]">{getEditableCategory(post)}</p>
                 </div>
-              </div>
+                <h3 className="mt-5 font-serif text-[1.75rem] leading-tight tracking-[-0.04em] text-[var(--slot4-page-text)]">{post.title}</h3>
+                <p className="mt-4 line-clamp-3 text-sm leading-7 text-[var(--slot4-muted-text)]">
+                  {getEditableExcerpt(post, 150)}
+                </p>
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-black text-[var(--slot4-page-text)]">Open page <ArrowRight className="h-4 w-4" /></span>
+              </Link>
             ))}
           </div>
         </div>
